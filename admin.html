@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+<h1 class="text-3xl font-bold mb-6">Admin Control Unit</h1>
+
+<div class="grid md:grid-cols-3 gap-8">
+
+  <!-- Create Page -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Create New Page</h2>
+    <input id="pageName" type="text" placeholder="Page Name" class="w-full p-2 border rounded mb-3">
+    <button onclick="createPage()" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Create</button>
+  </div>
+
+  <!-- Add Post -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Add Post</h2>
+    <select id="pageSelect" class="w-full p-2 border rounded mb-3"></select>
+    <input id="imageUrl" type="text" placeholder="Image URL" class="w-full p-2 border rounded mb-3">
+    <input id="description" type="text" placeholder="Description" class="w-full p-2 border rounded mb-3">
+    <button onclick="addPost()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Add</button>
+  </div>
+
+  <!-- Update Post -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Update Post</h2>
+    <select id="updatePageSelect" class="w-full p-2 border rounded mb-3"></select>
+    <input id="postId" type="text" placeholder="Post ID" class="w-full p-2 border rounded mb-3">
+    <input id="newImage" type="text" placeholder="New Image URL" class="w-full p-2 border rounded mb-3">
+    <input id="newDesc" type="text" placeholder="New Description" class="w-full p-2 border rounded mb-3">
+    <button onclick="updatePost()" class="bg-yellow-600 text-white px-4 py-2 rounded w-full">Update</button>
+  </div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD-_RmLITahJNeHrA84wxXeWEDj8vYLJNg",
+  authDomain: "blog-database-b95f7.firebaseapp.com",
+  projectId: "blog-database-b95f7",
+  storageBucket: "blog-database-b95f7.firebasestorage.app",
+  messagingSenderId: "730060757439",
+  appId: "1:730060757439:web:264a88711bb4215866a90a",
+  measurementId: "G-EX3TPSYK4B"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const pageSelect = document.getElementById("pageSelect");
+const updatePageSelect = document.getElementById("updatePageSelect");
+
+async function loadPages() {
+  const snapshot = await getDocs(collection(db, "pages"));
+  pageSelect.innerHTML = "";
+  updatePageSelect.innerHTML = "";
+
+  snapshot.forEach(docSnap => {
+    pageSelect.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+    updatePageSelect.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+  });
+}
+
+window.createPage = async function() {
+  const name = document.getElementById("pageName").value;
+  await addDoc(collection(db, "pages"), { name });
+  alert("Page Created");
+  loadPages();
+}
+
+window.addPost = async function() {
+  const pageId = pageSelect.value;
+  const image = document.getElementById("imageUrl").value;
+  const description = document.getElementById("description").value;
+
+  const docRef = await addDoc(collection(db, "pages", pageId, "posts"), {
+    image,
+    description
+  });
+
+  alert("Post Added. ID: " + docRef.id);
+}
+
+window.updatePost = async function() {
+  const pageId = updatePageSelect.value;
+  const postId = document.getElementById("postId").value;
+  const image = document.getElementById("newImage").value;
+  const description = document.getElementById("newDesc").value;
+
+  await updateDoc(doc(db, "pages", pageId, "posts", postId), {
+    image,
+    description
+  });
+
+  alert("Post Updated");
+}
+
+loadPages();
+
+</script>
+
+</body>
+</html>
