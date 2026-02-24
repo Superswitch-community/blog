@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blog System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+<h1 class="text-3xl font-bold mb-8 text-center">Blog Control & Viewer</h1>
+
+<!-- ================= ADMIN SECTION ================= -->
+
+<div class="grid md:grid-cols-3 gap-8 mb-16">
+
+  <!-- Create Page -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Create New Page</h2>
+    <input id="pageName" type="text" placeholder="Page Name" class="w-full p-2 border rounded mb-3">
+    <button onclick="createPage()" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Create</button>
+  </div>
+
+  <!-- Add Post -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Add Post</h2>
+    <select id="pageSelect" class="w-full p-2 border rounded mb-3"></select>
+    <input id="postNumber" type="number" placeholder="Post Number ID (1,2,3...)" class="w-full p-2 border rounded mb-3">
+    <input id="imageUrl" type="text" placeholder="Image URL" class="w-full p-2 border rounded mb-3">
+    <input id="description" type="text" placeholder="Description" class="w-full p-2 border rounded mb-3">
+    <button onclick="addPost()" class="bg-green-600 text-white px-4 py-2 rounded w-full">Add</button>
+  </div>
+
+  <!-- Update Post -->
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-semibold mb-4">Update Post</h2>
+    <select id="updatePageSelect" class="w-full p-2 border rounded mb-3"></select>
+    <input id="postId" type="number" placeholder="Post Number ID" class="w-full p-2 border rounded mb-3">
+    <input id="newImage" type="text" placeholder="New Image URL" class="w-full p-2 border rounded mb-3">
+    <input id="newDesc" type="text" placeholder="New Description" class="w-full p-2 border rounded mb-3">
+    <button onclick="updatePost()" class="bg-yellow-600 text-white px-4 py-2 rounded w-full">Update</button>
+  </div>
+
+</div>
+
+<hr class="mb-10">
+
+<!-- ================= POSTS VIEWER ================= -->
+
+<h2 class="text-2xl font-bold text-center mb-6">Posts Viewer</h2>
+
+<div id="pageContainer"></div>
+
+<div class="flex justify-center gap-6 mt-8">
+  <button id="prevBtn" class="bg-gray-600 text-white px-6 py-2 rounded">◀ Prev</button>
+  <button id="nextBtn" class="bg-blue-600 text-white px-6 py-2 rounded">Next ▶</button>
+</div>
+
+<!-- ================= FIREBASE SCRIPT ================= -->
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  doc, 
+  setDoc, 
+  updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD-_RmLITahJNeHrA84wxXeWEDj8vYLJNg",
+  authDomain: "blog-database-b95f7.firebaseapp.com",
+  projectId: "blog-database-b95f7",
+  storageBucket: "blog-database-b95f7.firebasestorage.app",
+  messagingSenderId: "730060757439",
+  appId: "1:730060757439:web:264a88711bb4215866a90a",
+  measurementId: "G-EX3TPSYK4B"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const pageSelect = document.getElementById("pageSelect");
+const updatePageSelect = document.getElementById("updatePageSelect");
+
+const container = document.getElementById("pageContainer");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+let pages = [];
+let currentIndex = 0;
+
+/* ================= LOAD PAGES ================= */
+
+async function loadPages() {
+  const snapshot = await getDocs(collection(db, "pages"));
+  pages = snapshot.docs;
+
+  pageSelect.innerHTML = "";
+  updatePageSelect.innerHTML = "";
+
+  pages.forEach(docSnap => {
+    pageSelect.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+    updatePageSelect.innerHTML += `<option value="${docSnap.id}">${docSnap.data().name}</option>`;
+  });
+
+  if (pages.length > 0) renderPage();
+}
+
+/* ================= CREATE PAGE ================= */
+
+window.createPage = async function() {
+  const name = document.getElementById("pageName").value;
+  if (!name) return alert("Enter page name");
+
+  await addDoc(collection(db, "pages"), { name });
+  alert("Page Created");
+  loadPages();
+};
+
+/* ================= ADD POST ================= */
+
+window.addPost = async function() {
+  const pageId = pageSelect.value;
+  const customId = document.getElementById("postNumber").value;
+  const image = document.getElementById("imageUrl").value;
+  const description = document.getElementById("description").value;
+
+  if (!customId) return alert("Enter Post Number ID");
+
+  await setDoc(doc(db, "pages", pageId, "posts", customId), {
+    customId: Number(customId),
+    image,
+    description
+  });
+
+  alert("Post Saved with ID: " + customId);
+  renderPage();
+};
+
+/* ================= UPDATE POST ================= */
+
+window.updatePost = async function() {
+  const pageId = updatePageSelect.value;
+  const postId = document.getElementById("postId").value;
+  const image = document.getElementById("newImage").value;
+  const description = document.getElementById("newDesc").value;
+
+  if (!postId) return alert("Enter Post Number ID");
+
+  await updateDoc(doc(db, "pages", pageId, "posts", postId), {
+    image,
+    description
+  });
+
+  alert("Post Updated");
+  renderPage();
+};
+
+/* ================= RENDER CURRENT PAGE ================= */
+
+async function renderPage() {
+  if (pages.length === 0) return;
+
+  const pageDoc = pages[currentIndex];
+  container.innerHTML = "";
+
+  const pageDiv = document.createElement("div");
+  pageDiv.className = "bg-white p-6 rounded shadow";
+
+  pageDiv.innerHTML = `
+    <h3 class="text-2xl font-bold mb-6 text-center">${pageDoc.data().name}</h3>
+    <div id="posts" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+  `;
+
+  container.appendChild(pageDiv);
+
+  const postsContainer = document.getElementById("posts");
+  const postsSnapshot = await getDocs(collection(db, "pages", pageDoc.id, "posts"));
+
+  postsSnapshot.forEach(docSnap => {
+    const post = docSnap.data();
+
+    postsContainer.innerHTML += `
+      <div class="bg-gray-50 p-4 rounded shadow">
+        <img src="${post.image}" class="w-full h-40 object-cover rounded mb-3"/>
+        <p class="font-bold mb-1">Post ID: ${post.customId}</p>
+        <p>${post.description}</p>
+      </div>
+    `;
+  });
+}
+
+/* ================= PAGINATION ================= */
+
+nextBtn.addEventListener("click", () => {
+  if (pages.length === 0) return;
+  currentIndex++;
+  if (currentIndex >= pages.length) currentIndex = 0;
+  renderPage();
+});
+
+prevBtn.addEventListener("click", () => {
+  if (pages.length === 0) return;
+  currentIndex--;
+  if (currentIndex < 0) currentIndex = pages.length - 1;
+  renderPage();
+});
+
+loadPages();
+
+</script>
+
+</body>
+</html>
