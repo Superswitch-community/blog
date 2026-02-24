@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Posts</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+<h1 class="text-3xl font-bold mb-6">All Pages</h1>
+<div id="content"></div>
+
+<script type="module">
+
+// 🔥 PASTE YOUR FIREBASE CONFIG HERE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD-_RmLITahJNeHrA84wxXeWEDj8vYLJNg",
+  authDomain: "blog-database-b95f7.firebaseapp.com",
+  projectId: "blog-database-b95f7",
+  storageBucket: "blog-database-b95f7.firebasestorage.app",
+  messagingSenderId: "730060757439",
+  appId: "1:730060757439:web:264a88711bb4215866a90a",
+  measurementId: "G-EX3TPSYK4B"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const content = document.getElementById("content");
+
+async function loadPages() {
+  const pagesSnapshot = await getDocs(collection(db, "pages"));
+  content.innerHTML = "";
+
+  for (const pageDoc of pagesSnapshot.docs) {
+    const pageDiv = document.createElement("div");
+    pageDiv.className = "mb-10";
+
+    pageDiv.innerHTML = `
+      <h2 class="text-2xl font-semibold mb-4">${pageDoc.data().name}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="posts-${pageDoc.id}"></div>
+    `;
+
+    content.appendChild(pageDiv);
+
+    const postsContainer = document.getElementById(`posts-${pageDoc.id}`);
+    const postsSnapshot = await getDocs(collection(db, "pages", pageDoc.id, "posts"));
+
+    postsSnapshot.forEach(postDoc => {
+      const post = postDoc.data();
+      postsContainer.innerHTML += `
+        <div class="bg-white p-4 rounded shadow">
+          <img src="${post.image}" class="w-full h-40 object-cover rounded mb-3"/>
+          <p>${post.description}</p>
+        </div>
+      `;
+    });
+  }
+}
+
+loadPages();
+
+</script>
+
+</body>
+</html>
